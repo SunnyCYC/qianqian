@@ -1,10 +1,10 @@
-/* 離線可用：先上網拿最新版，連不上才用上次存下的。
+﻿/* 離線可用：先上網拿最新版，連不上才用上次存下的。
  *
  * 只快取程式本身（同一個網站的檔案），帳本資料在 IndexedDB，跟這裡無關。
  * 匯率 API 不快取：舊匯率要由使用者在盤點時自己決定要不要沿用。
  */
 
-const CACHE = "qianqian-v1";
+const CACHE = "qianqian-v2";
 const SHELL = [
   "./",
   "index.html",
@@ -48,8 +48,9 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET" || url.origin !== self.location.origin) return;
+  // no-cache：每次都向網站確認是不是最新版，否則瀏覽器會沿用最多 10 分鐘前的舊檔
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: "no-cache" })
       .then((resp) => {
         if (resp.ok) {
           const copy = resp.clone();
