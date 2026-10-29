@@ -1,0 +1,449 @@
+/* 設計系統，沿用 e-diary。
+ *
+ * 視覺目標：平靜、低摩擦。任何視覺噪音都會累積成不想打開的理由。
+ */
+
+:root {
+  --bg: #fbfaf8;
+  --surface: #ffffff;
+  --surface-alt: #f4f2ee;
+  --border: #e4e0d8;
+  --border-strong: #cfc9bd;
+
+  --text: #2b2825;
+  --text-soft: #6b655c;
+  --text-faint: #9b948a;
+
+  --accent: #4a6fa5;
+  --accent-soft: #eaf0f8;
+  --accent-text: #35527c;
+
+  --positive: #4a7c59;
+  --negative: #a85751;
+
+  /* Mood Meter 四象限（ADR-0010） */
+  --q-red: #d98a86;
+  --q-yellow: #e3c46a;
+  --q-blue: #7d95b8;
+  --q-green: #7faa86;
+
+  --radius: 8px;
+  --radius-sm: 5px;
+  --shadow: 0 1px 2px rgba(43, 40, 37, 0.06);
+  --shadow-lg: 0 8px 28px rgba(43, 40, 37, 0.14);
+
+  --font: "Inter", "Segoe UI", system-ui, -apple-system,
+    "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+  --mono: "Cascadia Code", "SF Mono", Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1b19;
+    --surface: #26241f;
+    --surface-alt: #2f2c27;
+    --border: #3a362f;
+    --border-strong: #4c473e;
+
+    --text: #ece8e1;
+    --text-soft: #a8a196;
+    --text-faint: #7b746a;
+
+    --accent: #8aa9d6;
+    --accent-soft: #2a3444;
+    --accent-text: #a9c2e6;
+
+    --positive: #7fb28c;
+    --negative: #d4908a;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.45);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent-text);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+/* --- 按鈕 ------------------------------------------------------------ */
+
+/* display 的宣告會蓋掉 hidden 屬性，必須明確贏過它 */
+[hidden] {
+  display: none !important;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 7px 13px;
+  transition: background 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: var(--surface-alt);
+  border-color: var(--border-strong);
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--accent-text);
+  border-color: var(--accent-text);
+}
+
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-soft);
+}
+
+.btn-ghost:hover {
+  background: var(--surface-alt);
+  border-color: transparent;
+}
+
+.btn-sm {
+  padding: 4px 9px;
+  font-size: 13px;
+}
+
+.btn-danger:hover {
+  background: var(--negative);
+  border-color: var(--negative);
+  color: #fff;
+}
+
+/* --- 版面 ------------------------------------------------------------ */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.app-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+.app-nav {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.app-nav a {
+  color: var(--text-soft);
+  padding: 6px 11px;
+  border-radius: var(--radius-sm);
+}
+
+.app-nav a:hover {
+  background: var(--surface-alt);
+  text-decoration: none;
+}
+
+.app-nav a.active {
+  color: var(--text);
+  background: var(--surface-alt);
+}
+
+.container {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 22px 28px 80px;
+}
+
+/* --- 標籤 chip -------------------------------------------------------- */
+
+/* 直接選取：實心，代表使用者的明確輸入 */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  border: 1px solid transparent;
+  border-radius: 100px;
+  padding: 1px 9px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  white-space: nowrap;
+}
+
+/* 推導而來：淡色純文字，讓使用者一眼分辨資料來源（DESIGN.md §7） */
+.chip-derived {
+  background: transparent;
+  color: var(--text-faint);
+  padding: 1px 3px;
+  border-color: transparent;
+}
+
+.chip-removable {
+  padding-right: 4px;
+}
+
+.chip-x {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  opacity: 0.55;
+  padding: 0 3px;
+  line-height: 1;
+  border-radius: 100px;
+}
+
+.chip-x:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* --- 通用小元件 ------------------------------------------------------- */
+
+.muted {
+  color: var(--text-soft);
+}
+
+.faint {
+  color: var(--text-faint);
+}
+
+.score-pos {
+  color: var(--positive);
+}
+
+.score-neg {
+  color: var(--negative);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 64px 20px;
+  color: var(--text-faint);
+}
+
+.empty-state h2 {
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--text-soft);
+  margin: 0 0 6px;
+}
+
+.toast {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--text);
+  color: var(--bg);
+  padding: 9px 18px;
+  border-radius: 100px;
+  font-size: 13.5px;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s, transform 0.18s;
+  z-index: 200;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast.error {
+  background: var(--negative);
+  color: #fff;
+}
+
+/* --- 彈出層 ----------------------------------------------------------- */
+
+.popover {
+  position: absolute;
+  z-index: 100;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 12px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 18, 16, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 150;
+}
+
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 22px;
+  width: min(460px, calc(100vw - 40px));
+}
+
+.modal-wide {
+  width: min(560px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+}
+
+.modal h3 {
+  margin: 0 0 14px;
+  font-size: 16px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+/* 對話框裡的欄位。原本放在 manage.css，但日記頁沒載那支，
+   音樂筆記改用對話框之後整個排版就散掉了——跟著 .modal 放才不會再漏。 */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 13px;
+}
+
+.field label {
+  font-size: 12.5px;
+  color: var(--text-soft);
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+}
+
+.field textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* --- 手機 ------------------------------------------------------------- */
+
+/* 斷點取 720px：平板直立還放得下表格，手機放不下。各頁自己的版面調整
+   寫在各自的 css 裡，這裡只處理外框與全站共用的元件。 */
+@media (max-width: 720px) {
+  .app-header {
+    padding: 11px 14px;
+    gap: 10px;
+  }
+
+  .app-nav a {
+    padding: 6px 9px;
+  }
+
+  .container {
+    padding: 16px 14px 60px;
+  }
+
+  /* iOS Safari 會在聚焦到小於 16px 的輸入框時自動放大整頁，而且不會縮
+     回去——每打一次字就要手動縮放，這足以讓人放棄用手機記錄。 */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  .modal {
+    padding: 18px;
+    width: calc(100vw - 24px);
+  }
+
+  /* 彈出層會被 positionPopover 夾在視窗內，但內容本身也不能比螢幕寬 */
+  .popover {
+    max-width: calc(100vw - 20px);
+  }
+}

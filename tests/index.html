@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <title>測試中…</title>
+    <style>
+      body { font: 14px/1.6 "Segoe UI", "Microsoft JhengHei", sans-serif; margin: 24px; }
+      .pass { color: #4a7c59; }
+      .fail { color: #a85751; }
+    </style>
+  </head>
+  <body>
+    <div id="out">測試中…</div>
+    <script type="module">
+      import { run } from "./runner.js";
+      import "./money.test.js";
+      import "./assets.test.js";
+      import "./cashflow.test.js";
+      import "./wishlist.test.js";
+      import "./store.test.js";
+      run(document.getElementById("out"));
+    </script>
+  </body>
+</html>

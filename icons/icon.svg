@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#4a6fa5"/>
+  <g stroke="#fff" stroke-linecap="round" stroke-opacity=".75">
+    <path d="M92 196 H170" stroke-width="22"/>
+    <path d="M70 256 H150" stroke-width="22"/>
+    <path d="M92 316 H170" stroke-width="22"/>
+  </g>
+  <circle cx="300" cy="256" r="128" fill="#fff"/>
+  <circle cx="300" cy="256" r="101" fill="none" stroke="#4a6fa5" stroke-opacity=".28" stroke-width="12"/>
+  <text x="300" y="256" dy=".36em" text-anchor="middle" font-size="124" font-weight="700" fill="#4a6fa5"
+        font-family="Microsoft JhengHei, PingFang TC, Noto Sans TC, sans-serif">錢</text>
+</svg>
