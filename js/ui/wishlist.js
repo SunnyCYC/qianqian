@@ -325,7 +325,7 @@ async function closeWish(item, status, reload) {
     await api.closeWish(item.id, status);
     toast(
       status === "bought"
-        ? "已標成買了。記得「更新現況」，帳戶餘額才會反映這筆"
+        ? "已標成買了。記得到帳戶「改餘額」，總資產才會反映這筆"
         : "已移到「已完成」"
     );
     reload();

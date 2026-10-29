@@ -81,7 +81,7 @@ function notices(data) {
   const items = [];
   if (data.missing_rates.length) {
     items.push(
-      `沒有 ${data.missing_rates.join("、")} 的匯率，這些帳戶沒有算進總額。按「更新現況」補上匯率。`
+      `沒有 ${data.missing_rates.join("、")} 的匯率，這些帳戶沒有算進總額。按「更新所有餘額」補上匯率。`
     );
   }
   const rates = Object.entries(data.rates);
@@ -147,20 +147,38 @@ function accountsTable(data, reload) {
           foreign ? el("div", { class: "fin-acc-meta" }, `≈ ${money(cell.base_minor)}`) : null
         );
       }),
-      el("td", { class: "num", "data-label": "小計" }, money(acc.net_base_minor)),
+      el(
+        "td",
+        { class: "num", "data-label": "小計" },
+        acc.days_old === null && acc.is_active
+          ? el(
+              "button",
+              { class: "btn btn-sm btn-primary", type: "button", onclick: () => openSnapshot(reload, acc.id) },
+              "填入餘額"
+            )
+          : money(acc.net_base_minor)
+      ),
       el("td", { class: acc.stale ? "fin-stale" : "fin-acc-meta" }, age),
       el(
         "td",
-        {},
+        { class: "wish-actions" },
+        acc.is_active && acc.days_old !== null
+          ? el(
+              "button",
+              { class: "btn btn-sm", type: "button", onclick: () => openSnapshot(reload, acc.id) },
+              "改餘額"
+            )
+          : null,
         acc.is_active
           ? el(
               "button",
               {
                 class: "btn btn-sm",
                 type: "button",
+                title: "改名稱、銀行，或關閉帳戶",
                 onclick: () => editAccount(acc, reload),
               },
-              "編輯"
+              "⋯"
             )
           : null
       )
@@ -279,17 +297,19 @@ export async function renderFinance(mount) {
     data.accounts.some((a) => a.is_active)
       ? el(
           "button",
-          { class: "btn btn-sm btn-primary", type: "button", onclick: () => openSnapshot(reload) },
-          "更新現況"
+          {
+            class: "btn btn-sm btn-primary",
+            type: "button",
+            title: "一次更新所有帳戶的餘額，例如每個月底盤點一次",
+            onclick: () => openSnapshot(reload),
+          },
+          "更新所有餘額"
         )
       : null
   );
 
   if (!data.accounts.length) {
-    mount.replaceChildren(
-      toolbar,
-      emptyState("還沒有帳戶", "按「+ 帳戶」建立第一個，再按「更新現況」填入餘額。")
-    );
+    mount.replaceChildren(toolbar, gettingStarted(reload));
     return;
   }
 
@@ -311,29 +331,49 @@ export async function renderFinance(mount) {
 
 /* --- 帳戶 ------------------------------------------------------------- */
 
+/** 還沒有帳戶時的說明：帳戶是什麼、接著要做什麼。 */
+function gettingStarted(reload) {
+  const step = (n, title, body) =>
+    el("li", { class: "start-step" }, el("strong", {}, `${n}. ${title}`), el("div", { class: "fin-acc-meta" }, body));
+  return el(
+    "div",
+    { class: "start-guide" },
+    el("h2", {}, "先把錢放在哪裡記下來"),
+    el(
+      "ol",
+      {},
+      step(1, "新增帳戶", "一個帳戶 = 一個放錢的地方，例如「郵局」「國泰世華」「元大證券」「錢包現金」。"),
+      step(2, "填入餘額", "寫下這個帳戶裡現在有多少錢：活存填在「現金」，定存、股票、基金各填各的；信用卡這期要繳的填在「信用卡未繳」。"),
+      step(3, "之後偶爾更新", "例如每個月底按「更新所有餘額」，改有變動的數字就好，就能看到資產的變化。")
+    ),
+    el("button", { class: "btn btn-primary", type: "button", onclick: () => addAccount(reload) }, "+ 新增第一個帳戶")
+  );
+}
+
 function addAccount(reload) {
-  const name = textField("帳戶名稱", "", "例如「國泰 活存」「Firstrade 美股」");
-  const institution = textField("銀行／券商", "", "選填");
+  const name = textField("帳戶名稱", "", "放錢的地方，例如「郵局」「國泰世華」「元大證券」「錢包」");
+  const institution = textField("銀行／券商", "", "選填，只是備註");
   const currency = selectField(
     "幣別",
     CURRENCIES.map((c) => ({ value: c, label: c })),
     "TWD",
-    "建立後不能改：既有餘額是用這個幣別記的"
+    "一般台幣帳戶不用改。建立後不能改"
   );
   modal({
-    title: "新帳戶",
+    title: "新增帳戶",
     fields: [name.node, institution.node, currency.node],
-    confirmLabel: "建立",
+    confirmLabel: "下一步：填入餘額",
     onConfirm: async () => {
       const value = name.input.value.trim();
       if (!value) throw new Error("請輸入帳戶名稱");
-      await api.createFinanceAccount({
+      const acc = await api.createFinanceAccount({
         name: value,
         institution: institution.input.value.trim() || null,
         currency: currency.select.value,
       });
-      toast("已建立");
       await reload();
+      // 建完馬上填，否則使用者面對一列「0、還沒記過」不知道接著要做什麼
+      setTimeout(() => openSnapshot(reload, acc.id), 0);
     },
   });
 }
@@ -390,14 +430,15 @@ function editAccount(acc, reload) {
  * 清空的格子不送出——它會沿用上次的數字；要歸零請填 0。
  * 「沒記」與 0 是兩回事，跟評分留空不等於 0 分同一條規則。
  */
-async function openSnapshot(reload) {
+async function openSnapshot(reload, onlyAccountId = null) {
   const today = localDate();
   const [current, live] = await Promise.all([
     api.financeOverview(today),
     api.liveRates().catch((err) => ({ rates: {}, error: err.message })),
   ]);
   const base = current.base_currency;
-  const active = current.accounts.filter((a) => a.is_active);
+  const active = current.accounts.filter((a) => a.is_active && (!onlyAccountId || a.id === onlyAccountId));
+  const single = onlyAccountId ? active[0] : null;
   const foreign = [...new Set(active.map((a) => a.currency))].filter((c) => c !== base);
 
   const date = el("input", { type: "date", value: today });
@@ -465,11 +506,20 @@ async function openSnapshot(reload) {
     )
   );
 
+  const fresh = single && !Object.keys(single.cells).length;
   modal({
-    title: "更新現況",
+    title: single ? `${single.name}：${fresh ? "填入餘額" : "改餘額"}` : "更新所有餘額",
     wide: true,
     fields: [
-      dateField,
+      el("h4", { class: "fin-sub" }, single ? "裡面現在有多少錢" : "各帳戶現在有多少錢"),
+      el(
+        "p",
+        { class: "field-hint" },
+        fresh
+          ? "有的才填，沒有的留空。活存、存款填在「現金」；信用卡這期要繳的金額填在「信用卡未繳」（填正數，會自動扣掉）。"
+          : "已帶入上次的數字，只改有變的。負債（信用卡、貸款）填正數。清空的格子沿用上次；要歸零請填 0。"
+      ),
+      ...blocks,
       ...(foreign.length
         ? [
             el("h4", { class: "fin-sub" }, "匯率"),
@@ -477,13 +527,7 @@ async function openSnapshot(reload) {
             ...rateInputs.map((r) => r.node),
           ]
         : []),
-      el("h4", { class: "fin-sub" }, "餘額（原幣）"),
-      el(
-        "p",
-        { class: "field-hint" },
-        "已帶入上次的數字，只改有變的。負債（信用卡、貸款）填正數。清空的格子沿用上次；要歸零請填 0。"
-      ),
-      ...blocks,
+      dateField,
     ].filter(Boolean),
     confirmLabel: "存檔",
     onConfirm: async () => {

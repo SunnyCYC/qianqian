@@ -518,3 +518,35 @@
     margin-top: 24px;
   }
 }
+
+/* --- 第一次使用 ------------------------------------------------------- */
+
+.start-guide {
+  max-width: 520px;
+  margin: 32px auto;
+  padding: 22px 26px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.start-guide h2 {
+  margin: 0 0 12px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.start-guide ol {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.start-step .fin-acc-meta {
+  font-size: 13px;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
