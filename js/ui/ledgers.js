@@ -22,7 +22,7 @@ function passwordFields(required = false) {
       return null;
     }
     if (p !== again.input.value) throw new Error("兩次輸入的密碼不一樣");
-    if (p.length < 4) throw new Error("密碼至少 4 個字");
+    if (p.length < 8) throw new Error("密碼至少 8 個字");
     return p;
   };
   return { nodes: [pass.node, again.node], read };

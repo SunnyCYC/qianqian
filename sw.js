@@ -1,10 +1,10 @@
-﻿/* 離線可用：先上網拿最新版，連不上才用上次存下的。
+/* 離線可用：先上網拿最新版，連不上才用上次存下的。
  *
  * 只快取程式本身（同一個網站的檔案），帳本資料在 IndexedDB，跟這裡無關。
  * 匯率 API 不快取：舊匯率要由使用者在盤點時自己決定要不要沿用。
  */
 
-const CACHE = "qianqian-v2";
+const CACHE = "qianqian-v3";
 const SHELL = [
   "./",
   "index.html",
