@@ -125,9 +125,7 @@ function newLedger(onOpen) {
     ],
     confirmLabel: "建立",
     onConfirm: async () => {
-      const session = await store.createLedger(name.input.value, password.read());
-      store.requestPersistence();
-      onOpen(session);
+      onOpen(await store.createLedger(name.input.value, password.read()));
     },
   });
 }
@@ -191,7 +189,7 @@ export async function restoreBackup(onOpen) {
     return;
   }
   const { record, exportedAt, existing } = backup;
-  const when = exportedAt ? exportedAt.slice(0, 10) : "不明";
+  const when = exportedAt ? localDate(new Date(exportedAt)) : "不明";
   const finish = async (replace) => {
     const summary = await store.importBackup(record, { replace });
     toast("已還原");

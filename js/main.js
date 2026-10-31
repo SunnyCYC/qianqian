@@ -13,7 +13,10 @@ const IDLE_LOCK_MS = 15 * 60 * 1000;
 const BACKUP_REMIND_DAYS = 30;
 
 const main = document.getElementById("main");
+const notice = document.getElementById("notice");
 const footer = document.getElementById("footer");
+// 按「這次先不要」只關到下次打開這本帳本，不記住，免得一直沒備份也沒人提醒
+const snoozed = new Set();
 const ledgerBtn = document.getElementById("ledger-btn");
 const installBtn = document.getElementById("install-btn");
 
@@ -21,11 +24,15 @@ function showPicker() {
   useSession(null);
   ledgerBtn.hidden = true;
   footer.replaceChildren();
+  notice.replaceChildren();
   ledgers.renderPicker(main, open);
 }
 
 async function open(session) {
   useSession(session);
+  snoozed.delete(session.id);
+  // 每次打開都再請一次：瀏覽器常在網站用久了、或安裝到桌面後才答應
+  store.requestPersistence();
   ledgerBtn.hidden = false;
   ledgerBtn.textContent = `${session.name} ▾`;
   await refresh();
@@ -44,11 +51,60 @@ async function refresh() {
   renderFooter(session);
 }
 
-function renderFooter(session) {
+function backupState(session) {
   const last = session.record.backed_up_at;
-  const days = last ? daysBetween(last.slice(0, 10), localDate()) : null;
+  // backed_up_at 是 UTC 時間戳，要換成本地日期再比，否則台灣凌晨備份會顯示「1 天前」
+  const days = last ? daysBetween(localDate(new Date(last)), localDate()) : null;
   const remind = hasData(session.doc) && (days === null || days > BACKUP_REMIND_DAYS);
   const text = last ? (days === 0 ? "今天" : `${days} 天前`) : "還沒備份過";
+  return { days, remind, text };
+}
+
+function renderNotice(session) {
+  const { days, remind } = backupState(session);
+  if (!remind || snoozed.has(session.id)) {
+    notice.replaceChildren();
+    return;
+  }
+  notice.replaceChildren(
+    el(
+      "div",
+      { class: "backup-notice" },
+      el(
+        "div",
+        { class: "backup-notice-text" },
+        el("strong", {}, days === null ? "這本帳本還沒備份過" : `已經 ${days} 天沒備份了`),
+        el(
+          "span",
+          {},
+          "資料只存在這台電腦的瀏覽器裡，清除瀏覽資料或換電腦就會不見。",
+          "備份檔建議放進 Google Drive 或 OneDrive。"
+        )
+      ),
+      el(
+        "button",
+        { class: "btn btn-sm btn-primary", type: "button", onclick: () => ledgers.exportBackup(session, refresh) },
+        "現在備份"
+      ),
+      el(
+        "button",
+        {
+          class: "btn btn-sm",
+          type: "button",
+          onclick: () => {
+            snoozed.add(session.id);
+            notice.replaceChildren();
+          },
+        },
+        "這次先不要"
+      )
+    )
+  );
+}
+
+function renderFooter(session) {
+  renderNotice(session);
+  const { remind, text } = backupState(session);
   footer.replaceChildren(
     el(
       "div",

@@ -4,7 +4,7 @@
  * 匯率 API 不快取：舊匯率要由使用者在盤點時自己決定要不要沿用。
  */
 
-const CACHE = "qianqian-v3";
+const CACHE = "qianqian-v4";
 const SHELL = [
   "./",
   "index.html",
